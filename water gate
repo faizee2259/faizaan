@@ -1,0 +1,101 @@
+#include <LiquidCrystal.h>
+#include <Keypad.h>
+LiquidCrystal lcd(8, 7, A0, A1, A2, 3);
+long duration, inches, cm,set;
+int heart[300];
+int heart1=0;
+#include "HX711.h"
+#define DOUT A5
+#define CLK  A4
+const byte ROWS = 4; //four rows
+const byte COLS = 4; //four columns
+byte rowPins[ROWS] = {6, 4, 13,A3}; //connect to the row pinouts of the keypad
+byte colPins[COLS] = {9,10, 12, 11}; //connect to the column pinouts of the keypad
+int load =0;
+//define the cymbols on the buttons of the keypads
+char hexaKeys[ROWS][COLS] = {
+  {'D','#','0','*'},
+  {'C','9','8','7'},  
+  {'B','6','5','4'},
+   { 'A','3','2','1'},
+  
+};
+Keypad customKeypad = Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+
+
+HX711 scale(DOUT, CLK);
+
+float calibration_factor = 110; //-7050 worked for my 440lb max scale setup
+float units;
+float ounces;
+void setup() {
+  // put your setup code here, to run once:
+lcd.begin(16,2);
+   lcd.setCursor(0, 0);
+  lcd.print("Initializing...");
+  delay(2000);
+  
+   lcd.setCursor(0, 0);
+  lcd.print("Load based water");
+  
+   lcd.setCursor(0, 1);
+  lcd.print("     Dispensor");
+   
+  delay(2000);
+  scale.set_scale();
+  scale.tare();  //Reset the scale to 0
+
+  long zero_factor = scale.read_average(); //Get a baseline reading
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+lcd.clear();
+   lcd.setCursor(0, 0);
+  lcd.print("Enter the quant:-");
+  key();
+while(1)
+{
+  scale.set_scale(calibration_factor); //Adjust to this calibration factor
+  units = scale.get_units(), 10;
+  if (units < 0) 
+  {
+    units = 0.00;
+  }
+  ounces = units /1000;
+  lcd.setCursor(0, 1);lcd.print("W:-");
+  lcd.print(ounces);
+  lcd.print("Kgm");
+  if(ounces>=load)
+  {
+   lcd.clear();
+   lcd.setCursor(0, 0);
+  lcd.print("Filling completed");
+   delay(3000);
+   break;
+    }
+}
+}
+void key()
+{lcd.setCursor(0,1);
+  while(1)
+  {
+  char customKey = customKeypad.getKey();
+  
+  if (customKey){
+    if (customKey!='#')
+    {
+    lcd.print(customKey);lcd.print("Ltr");
+    load = customKey-0x30;
+    }
+    else 
+    {lcd.clear();
+                    lcd.setCursor(0,0);
+                    lcd.print("Filling started");
+      break;
+      }
+  }  
+  
+  }
+}
